@@ -1,66 +1,60 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Order Makan</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <div class="app">
+  <div class="page">
+
     <header class="topbar">
       <div>
-        <h1>Order Makan</h1>
-        <p id="menuSubtitle">Memuat menu...</p>
+        <div class="title">Order Makan</div>
+        <div class="subtitle" id="menuInfo">Memuat menu...</div>
       </div>
-      <button id="btnReload" class="btn secondary">Reload</button>
+      <button class="btn" id="btnReload">Reload</button>
     </header>
 
     <main class="grid">
+
       <!-- MENU -->
       <section class="card">
-        <div class="card-title">
-          <h2>Menu</h2>
-          <p class="muted">Klik + untuk menambah ke keranjang</p>
-        </div>
+        <div class="card-title">Menu</div>
+        <div class="card-subtitle">Klik + untuk menambah ke keranjang</div>
 
-        <div id="menuList" class="menu-list"></div>
+        <div class="menu-box" id="menuList">
+          <div class="muted">Memuat menu...</div>
+        </div>
       </section>
 
-      <!-- KERANJANG -->
+      <!-- CART -->
       <section class="card">
-        <div class="card-title">
-          <h2>Keranjang</h2>
-          <p class="muted">Qty bisa diubah kapan saja</p>
-        </div>
+        <div class="card-title">Keranjang</div>
+        <div class="card-subtitle">Qty bisa diubah kapan saja</div>
 
-        <div id="cartList" class="cart-list empty">
-          Keranjang masih kosong.
+        <div class="cart-box" id="cartBox">
+          <div class="muted">Keranjang masih kosong.</div>
         </div>
-
-        <div class="divider"></div>
 
         <div class="form">
-          <label>
-            Nama Pemesan
-            <input id="inpName" type="text" placeholder="Contoh: Budi" />
-          </label>
-
-          <button id="btnOrder" class="btn primary">Pesan Sekarang</button>
-
-          <a id="btnWA" class="btn wa hidden" target="_blank" rel="noopener">
-            Kirim ke WhatsApp Admin
-          </a>
-
-          <div id="statusBox" class="status"></div>
+          <label class="label">Nama Pemesan</label>
+          <input id="nameInput" class="input" placeholder="Contoh: Budi" />
         </div>
+
+        <button class="btn-primary" id="btnOrder">Pesan Sekarang</button>
+
+        <div class="status" id="statusText"></div>
       </section>
+
     </main>
 
     <footer class="footer">
-      <span class="muted">Menu diambil dari Google Sheets. Pesanan tersimpan otomatis.</span>
+      Menu diambil dari Google Sheets. Pesanan tersimpan otomatis.
     </footer>
+
   </div>
 
   <script src="script.js"></script>
