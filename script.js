@@ -1,277 +1,271 @@
 /*************************************************
  * CONFIG
  *************************************************/
-const API_URL = "https://script.google.com/macros/s/AKfycbyGH8KuOqzdyy2sfqph3qsPnfiKmx9FNPxyuUq27DU2CZ2ZREhzQH3Eg-HjMklty8oCaQ/exec";
+// GANTI INI dengan URL Web App Apps Script kamu
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyGH8KuOqzdyy2sfqph3qsPnfiKmx9FNPxyuUq27DU2CZ2ZREhzQH3Eg-HjMklty8oCaQ/exec";
 
 /*************************************************
  * STATE
  *************************************************/
-let MENU_LINES = [];
 let WA_ADMIN = "";
+let MENU_ITEMS = [];
 let CART = {}; // { title: qty }
 
 /*************************************************
- * ELEMENTS
+ * DOM
  *************************************************/
-const menuSubtitle = document.getElementById("menuSubtitle");
-const btnReload = document.getElementById("btnReload");
-
-const menuList = document.getElementById("menuList");
-const cartList = document.getElementById("cartList");
-
-const inpName = document.getElementById("inpName");
-
-const btnOrder = document.getElementById("btnOrder");
-const btnWA = document.getElementById("btnWA");
-const statusBox = document.getElementById("statusBox");
+const menuList   = document.getElementById("menuList");
+const cartBox    = document.getElementById("cartBox");
+const menuInfo   = document.getElementById("menuInfo");
+const btnReload  = document.getElementById("btnReload");
+const btnOrder   = document.getElementById("btnOrder");
+const statusText = document.getElementById("statusText");
+const nameInput  = document.getElementById("nameInput");
 
 /*************************************************
  * HELPERS
  *************************************************/
-function setStatus(msg, isError=false){
-  statusBox.textContent = msg || "";
-  statusBox.style.color = isError ? "#ffb3c0" : "";
-}
-
-function escapeHTML(str){
+function escapeHtml(str) {
   return String(str)
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
-function normalizePhone(phone){
-  phone = String(phone || "").trim();
-  phone = phone.replaceAll(" ", "").replaceAll("-", "");
-  if (phone.startsWith("08")) phone = "62" + phone.slice(1);
-  if (phone.startsWith("+62")) phone = "62" + phone.slice(3);
-  return phone;
+function setStatus(msg) {
+  statusText.textContent = msg || "";
 }
 
-// Detect kategori dari baris
-function isCategoryLine(line){
-  const up = line.toUpperCase();
+function parseMenuLines(menuLines) {
+  // gabungkan semua baris jadi 1 text besar
+  const rawText = (menuLines || []).join(" ").trim();
+  if (!rawText) return [];
 
-  if (line.includes("🍛") || line.includes("🥤")) return true;
-  if (up.includes("MINUMAN")) return true;
-  if (up.includes("MAKANAN")) return true;
-  if (up.includes("PEYEK")) return true;
-  if (up.includes("TOPPING")) return true;
-  if (up.startsWith("MENU ")) return true;
-  if (up.includes("MENYEDIAKAN")) return true;
+  // pecah berdasarkan bintang
+  let items = rawText.split("*").map(x => x.trim()).filter(Boolean);
 
-  // tanggal
-  if (up.includes("FEBRUARI") || up.includes("JANUARI") || up.includes("MARET") || up.includes("APRIL") || up.includes("MEI") || up.includes("JUNI") || up.includes("JULI") || up.includes("AGUSTUS") || up.includes("SEPTEMBER") || up.includes("OKTOBER") || up.includes("NOVEMBER") || up.includes("DESEMBER")) return true;
+  // fallback kalau tidak ada bintang
+  if (items.length <= 1) {
+    items = rawText.split(",").map(x => x.trim()).filter(Boolean);
+  }
 
-  // kalau cuma angka tanggal
-  if (/^\d{1,2}\s/.test(up)) return true;
+  // buang item terlalu pendek
+  items = items.filter(x => x.length >= 3);
 
-  return false;
+  // hapus duplikat
+  items = [...new Set(items)];
+
+  return items;
 }
 
-function buildWAMessage(){
-  const name = inpName.value.trim();
+function cartToArray() {
+  const arr = [];
+  Object.keys(CART).forEach(title => {
+    const qty = Number(CART[title] || 0);
+    if (qty > 0) arr.push({ title, qty });
+  });
+  return arr;
+}
 
-  const items = Object.keys(CART).map(title => ({
-    title,
-    qty: CART[title]
-  })).filter(x => x.qty > 0);
-
+function buildWhatsAppText(name, items) {
   let text = `*PESANAN BARU*\n\n`;
   text += `Nama: ${name}\n\n`;
-  text += `*Pesanan:*\n`;
-
+  text += `Pesanan:\n`;
   items.forEach(it => {
     text += `- ${it.qty}x ${it.title}\n`;
   });
-
   text += `\nTerima kasih 🙏`;
-
-  return encodeURIComponent(text);
+  return text;
 }
 
-function renderCart(){
-  const items = Object.keys(CART)
-    .map(title => ({ title, qty: CART[title] }))
-    .filter(x => x.qty > 0);
+/*************************************************
+ * API
+ *************************************************/
+async function apiPost(payload) {
+  const res = await fetch(WEB_APP_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(payload)
+  });
+  return await res.json();
+}
 
-  if (!items.length){
-    cartList.classList.add("empty");
-    cartList.innerHTML = "Keranjang masih kosong.";
+/*************************************************
+ * RENDER MENU
+ *************************************************/
+function renderMenu(menuItems) {
+  menuList.innerHTML = "";
+
+  if (!menuItems.length) {
+    menuList.innerHTML = `<div class="muted">Menu kosong.</div>`;
     return;
   }
 
-  cartList.classList.remove("empty");
-  cartList.innerHTML = items.map(it => {
-    return `
-      <div class="cart-item">
-        <div class="cart-title">${escapeHTML(it.title)}</div>
-        <div class="actions">
-          <button class="btn secondary small" onclick="cartMinus('${escapeHTML(it.title)}')">-</button>
-          <div class="qty">${it.qty}</div>
-          <button class="btn secondary small" onclick="cartPlus('${escapeHTML(it.title)}')">+</button>
-          <button class="btn danger small" onclick="cartRemove('${escapeHTML(it.title)}')">Hapus</button>
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
-function renderMenu(){
-  menuList.innerHTML = "";
-
-  MENU_LINES.forEach((line) => {
-    // kategori / judul
-    if (isCategoryLine(line)){
-      const div = document.createElement("div");
-      div.className = "menu-item";
-      div.innerHTML = `<div class="menu-title"><b>${escapeHTML(line)}</b></div>`;
-      menuList.appendChild(div);
-      return;
-    }
-
-    // item normal
-    const qty = CART[line] || 0;
-
+  menuItems.forEach((title) => {
     const div = document.createElement("div");
     div.className = "menu-item";
+
     div.innerHTML = `
-      <div class="menu-title">${escapeHTML(line)}</div>
-      <div class="actions">
-        <button class="btn secondary small" onclick="menuMinus('${escapeHTML(line)}')">-</button>
-        <div class="qty">${qty}</div>
-        <button class="btn secondary small" onclick="menuPlus('${escapeHTML(line)}')">+</button>
-      </div>
+      <div class="menu-title">${escapeHtml(title)}</div>
+      <button class="btn-add" type="button">+</button>
     `;
+
+    div.querySelector(".btn-add").addEventListener("click", () => {
+      addToCart(title);
+    });
+
     menuList.appendChild(div);
   });
 }
 
 /*************************************************
- * CART ACTIONS (global for onclick)
+ * CART
  *************************************************/
-window.menuPlus = function(title){
-  title = String(title);
-  CART[title] = (CART[title] || 0) + 1;
-  renderMenu();
+function addToCart(title) {
+  CART[title] = (Number(CART[title] || 0) + 1);
   renderCart();
-};
-
-window.menuMinus = function(title){
-  title = String(title);
-  CART[title] = Math.max(0, (CART[title] || 0) - 1);
-  if (CART[title] === 0) delete CART[title];
-  renderMenu();
-  renderCart();
-};
-
-window.cartPlus = window.menuPlus;
-window.cartMinus = window.menuMinus;
-
-window.cartRemove = function(title){
-  title = String(title);
-  delete CART[title];
-  renderMenu();
-  renderCart();
-};
-
-/*************************************************
- * API
- *************************************************/
-async function api(action, payload={}){
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type":"text/plain;charset=utf-8" },
-    body: JSON.stringify({ action, ...payload })
-  });
-  return await res.json();
 }
 
-async function loadMenu(){
-  setStatus("Memuat menu...");
-  btnWA.classList.add("hidden");
-  btnWA.href = "#";
+function incQty(title) {
+  CART[title] = (Number(CART[title] || 0) + 1);
+  renderCart();
+}
 
-  const data = await api("getMenu");
+function decQty(title) {
+  CART[title] = (Number(CART[title] || 0) - 1);
+  if (CART[title] <= 0) delete CART[title];
+  renderCart();
+}
 
-  if (!data.ok){
-    setStatus("Gagal load menu: " + data.message, true);
+function renderCart() {
+  const items = cartToArray();
+
+  if (!items.length) {
+    cartBox.innerHTML = `<div class="muted">Keranjang masih kosong.</div>`;
     return;
   }
 
-  MENU_LINES = (data.menuLines || []).filter(x => String(x || "").trim());
-  WA_ADMIN = normalizePhone(data.waAdmin || "");
+  cartBox.innerHTML = "";
 
-  menuSubtitle.textContent = `Menu tersedia: ${MENU_LINES.length} baris`;
+  items.forEach(it => {
+    const div = document.createElement("div");
+    div.className = "cart-item";
 
-  renderMenu();
-  renderCart();
+    div.innerHTML = `
+      <div class="cart-left">
+        <div class="cart-title">${escapeHtml(it.title)}</div>
+        <div class="cart-qty">
+          <button class="qty-btn" type="button">-</button>
+          <div class="qty-num">${it.qty}</div>
+          <button class="qty-btn" type="button">+</button>
+        </div>
+      </div>
+    `;
 
-  setStatus("Menu berhasil dimuat.");
+    const btnMinus = div.querySelectorAll(".qty-btn")[0];
+    const btnPlus  = div.querySelectorAll(".qty-btn")[1];
+
+    btnMinus.addEventListener("click", () => decQty(it.title));
+    btnPlus.addEventListener("click", () => incQty(it.title));
+
+    cartBox.appendChild(div);
+  });
 }
 
 /*************************************************
- * ORDER
+ * LOAD MENU
  *************************************************/
-btnOrder.addEventListener("click", async () => {
+async function loadMenu() {
+  setStatus("Memuat menu...");
+
   try {
-    setStatus("");
+    const res = await apiPost({ action: "getMenu" });
 
-    const name = inpName.value.trim();
-    if (!name) return setStatus("Nama wajib diisi.", true);
+    if (!res.ok) {
+      setStatus("Gagal load menu: " + (res.message || ""));
+      return;
+    }
 
-    const items = Object.keys(CART)
-      .map(title => ({ title, qty: CART[title] }))
-      .filter(x => x.qty > 0);
+    WA_ADMIN = String(res.waAdmin || "").trim();
+    MENU_ITEMS = parseMenuLines(res.menuLines || []);
 
-    if (!items.length) return setStatus("Keranjang masih kosong.", true);
+    menuInfo.textContent = `Menu tersedia: ${MENU_ITEMS.length} item`;
+    renderMenu(MENU_ITEMS);
 
-    btnOrder.disabled = true;
-    btnOrder.textContent = "Mengirim...";
+    setStatus("Menu berhasil dimuat.");
+  } catch (err) {
+    setStatus("Error: " + String(err));
+  }
+}
 
-    // Simpan ke sheets
-    const save = await api("createOrder", {
+/*************************************************
+ * CREATE ORDER
+ *************************************************/
+async function submitOrder() {
+  const name = String(nameInput.value || "").trim();
+  const items = cartToArray();
+
+  if (!name) {
+    setStatus("Nama wajib diisi.");
+    return;
+  }
+  if (!items.length) {
+    setStatus("Keranjang masih kosong.");
+    return;
+  }
+
+  btnOrder.disabled = true;
+  btnOrder.textContent = "Mengirim...";
+  setStatus("Menyimpan pesanan...");
+
+  try {
+    // 1) simpan ke sheets
+    const res = await apiPost({
+      action: "createOrder",
       name,
-      items,
-      userAgent: navigator.userAgent
+      items
     });
 
-    if (!save.ok){
-      btnOrder.disabled = false;
-      btnOrder.textContent = "Pesan Sekarang";
-      return setStatus("Gagal simpan pesanan: " + save.message, true);
+    if (!res.ok) {
+      setStatus("Gagal: " + (res.message || ""));
+      return;
     }
 
-    // WA admin
-    if (WA_ADMIN){
-      const msg = buildWAMessage();
-      btnWA.href = `https://wa.me/${WA_ADMIN}?text=${msg}`;
-      btnWA.classList.remove("hidden");
-    } else {
-      btnWA.classList.add("hidden");
+    // 2) redirect WA admin
+    if (!WA_ADMIN) {
+      setStatus("Pesanan tersimpan, tapi WA_ADMIN belum diisi di Google Sheets.");
+      return;
     }
 
-    setStatus("Pesanan berhasil disimpan. Klik tombol WhatsApp untuk mengirim ke admin.");
+    const waText = buildWhatsAppText(name, items);
+    const url = `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(waText)}`;
 
-    // Reset cart
+    // reset cart
     CART = {};
-    renderMenu();
     renderCart();
 
-    btnOrder.disabled = false;
-    btnOrder.textContent = "Pesan Sekarang";
-  } catch (err){
-    btnOrder.disabled = false;
-    btnOrder.textContent = "Pesan Sekarang";
-    setStatus("Error: " + err.message, true);
-  }
-});
+    setStatus("Pesanan tersimpan. Membuka WhatsApp...");
 
+    window.open(url, "_blank");
+
+  } catch (err) {
+    setStatus("Error: " + String(err));
+  } finally {
+    btnOrder.disabled = false;
+    btnOrder.textContent = "Pesan Sekarang";
+  }
+}
+
+/*************************************************
+ * EVENTS
+ *************************************************/
 btnReload.addEventListener("click", loadMenu);
+btnOrder.addEventListener("click", submitOrder);
 
 /*************************************************
  * INIT
  *************************************************/
+renderCart();
 loadMenu();
