@@ -1,8 +1,8 @@
 /*************************************************
  * CONFIG
  *************************************************/
-// GANTI INI dengan URL Web App Apps Script kamu
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyGH8KuOqzdyy2sfqph3qsPnfiKmx9FNPxyuUq27DU2CZ2ZREhzQH3Eg-HjMklty8oCaQ/exec";
+const WEB_APP_URL =
+  "https://script.google.com/macros/s/AKfycbyGH8KuOqzdyy2sfqph3qsPnfiKmx9FNPxyuUq27DU2CZ2ZREhzQH3Eg-HjMklty8oCaQ/exec";
 
 /*************************************************
  * STATE
@@ -38,28 +38,6 @@ function setStatus(msg) {
   statusText.textContent = msg || "";
 }
 
-function parseMenuLines(menuLines) {
-  // gabungkan semua baris jadi 1 text besar
-  const rawText = (menuLines || []).join(" ").trim();
-  if (!rawText) return [];
-
-  // pecah berdasarkan bintang
-  let items = rawText.split("*").map(x => x.trim()).filter(Boolean);
-
-  // fallback kalau tidak ada bintang
-  if (items.length <= 1) {
-    items = rawText.split(",").map(x => x.trim()).filter(Boolean);
-  }
-
-  // buang item terlalu pendek
-  items = items.filter(x => x.length >= 3);
-
-  // hapus duplikat
-  items = [...new Set(items)];
-
-  return items;
-}
-
 function cartToArray() {
   const arr = [];
   Object.keys(CART).forEach(title => {
@@ -78,6 +56,39 @@ function buildWhatsAppText(name, items) {
   });
   text += `\nTerima kasih 🙏`;
   return text;
+}
+
+/*************************************************
+ * PARSE MENU
+ * - Sheet Menu boleh:
+ *   1 baris panjang atau banyak baris
+ * - Pemisah utama: *
+ *************************************************/
+function parseMenuLines(menuLines) {
+  const rawText = (menuLines || []).join(" ").trim();
+  if (!rawText) return [];
+
+  // pecah berdasarkan *
+  let items = rawText
+    .split("*")
+    .map(x => x.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+  // fallback kalau user tidak pakai *
+  if (items.length <= 1) {
+    items = rawText
+      .split("\n")
+      .map(x => x.replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+  }
+
+  // buang item super pendek
+  items = items.filter(x => x.length >= 3);
+
+  // hapus duplikat
+  items = [...new Set(items)];
+
+  return items;
 }
 
 /*************************************************
@@ -233,21 +244,21 @@ async function submitOrder() {
       return;
     }
 
-    // 2) redirect WA admin
+    // ✅ RESET keranjang + input setelah sukses simpan
+    CART = {};
+    renderCart();
+    nameInput.value = "";
+
+    // 2) redirect WA admin (kalau ada)
     if (!WA_ADMIN) {
-      setStatus("Pesanan tersimpan, tapi WA_ADMIN belum diisi di Google Sheets.");
+      setStatus("Pesanan tersimpan. (WA Admin belum diset)");
       return;
     }
 
     const waText = buildWhatsAppText(name, items);
     const url = `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(waText)}`;
 
-    // reset cart
-    CART = {};
-    renderCart();
-
     setStatus("Pesanan tersimpan. Membuka WhatsApp...");
-
     window.open(url, "_blank");
 
   } catch (err) {
