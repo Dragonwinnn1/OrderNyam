@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Order Makan</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="app">
+    <header class="topbar">
+      <div>
+        <h1>Order Makan</h1>
+        <p id="menuSubtitle">Memuat menu...</p>
+      </div>
+      <button id="btnReload" class="btn secondary">Reload</button>
+    </header>
+
+    <main class="grid">
+      <!-- MENU -->
+      <section class="card">
+        <div class="card-title">
+          <h2>Menu</h2>
+          <p class="muted">Klik + untuk menambah ke keranjang</p>
+        </div>
+
+        <div id="menuList" class="menu-list"></div>
+      </section>
+
+      <!-- KERANJANG -->
+      <section class="card">
+        <div class="card-title">
+          <h2>Keranjang</h2>
+          <p class="muted">Qty bisa diubah kapan saja</p>
+        </div>
+
+        <div id="cartList" class="cart-list empty">
+          Keranjang masih kosong.
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="form">
+          <label>
+            Nama Pemesan
+            <input id="inpName" type="text" placeholder="Contoh: Budi" />
+          </label>
+
+          <label>
+            No WhatsApp Pemesan
+            <input id="inpPhone" type="text" placeholder="Contoh: 62812xxxxxxx" />
+          </label>
+
+          <label>
+            Alamat Lengkap
+            <textarea id="inpAddress" rows="3" placeholder="Contoh: Jl. Mawar No. 12, RT 02/RW 01"></textarea>
+          </label>
+
+          <button id="btnOrder" class="btn primary">Pesan Sekarang</button>
+
+          <a id="btnWA" class="btn wa hidden" target="_blank" rel="noopener">
+            Kirim ke WhatsApp Admin
+          </a>
+
+          <div id="statusBox" class="status"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span class="muted">Menu diambil dari Google Sheets. Pesanan tersimpan otomatis.</span>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
