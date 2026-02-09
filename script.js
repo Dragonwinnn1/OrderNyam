@@ -1,7 +1,6 @@
 /*************************************************
  * CONFIG
  *************************************************/
-// Nanti isi dengan URL Web App Apps Script setelah deploy
 const API_URL = "https://script.google.com/macros/s/AKfycbyGH8KuOqzdyy2sfqph3qsPnfiKmx9FNPxyuUq27DU2CZ2ZREhzQH3Eg-HjMklty8oCaQ/exec";
 
 /*************************************************
@@ -21,8 +20,6 @@ const menuList = document.getElementById("menuList");
 const cartList = document.getElementById("cartList");
 
 const inpName = document.getElementById("inpName");
-const inpPhone = document.getElementById("inpPhone");
-const inpAddress = document.getElementById("inpAddress");
 
 const btnOrder = document.getElementById("btnOrder");
 const btnWA = document.getElementById("btnWA");
@@ -48,20 +45,34 @@ function escapeHTML(str){
 function normalizePhone(phone){
   phone = String(phone || "").trim();
   phone = phone.replaceAll(" ", "").replaceAll("-", "");
-
-  // kalau 08xxxx => 628xxxx
   if (phone.startsWith("08")) phone = "62" + phone.slice(1);
-
-  // kalau +62 => 62
   if (phone.startsWith("+62")) phone = "62" + phone.slice(3);
-
   return phone;
+}
+
+// Detect kategori dari baris
+function isCategoryLine(line){
+  const up = line.toUpperCase();
+
+  if (line.includes("🍛") || line.includes("🥤")) return true;
+  if (up.includes("MINUMAN")) return true;
+  if (up.includes("MAKANAN")) return true;
+  if (up.includes("PEYEK")) return true;
+  if (up.includes("TOPPING")) return true;
+  if (up.startsWith("MENU ")) return true;
+  if (up.includes("MENYEDIAKAN")) return true;
+
+  // tanggal
+  if (up.includes("FEBRUARI") || up.includes("JANUARI") || up.includes("MARET") || up.includes("APRIL") || up.includes("MEI") || up.includes("JUNI") || up.includes("JULI") || up.includes("AGUSTUS") || up.includes("SEPTEMBER") || up.includes("OKTOBER") || up.includes("NOVEMBER") || up.includes("DESEMBER")) return true;
+
+  // kalau cuma angka tanggal
+  if (/^\d{1,2}\s/.test(up)) return true;
+
+  return false;
 }
 
 function buildWAMessage(){
   const name = inpName.value.trim();
-  const phone = inpPhone.value.trim();
-  const address = inpAddress.value.trim();
 
   const items = Object.keys(CART).map(title => ({
     title,
@@ -69,9 +80,7 @@ function buildWAMessage(){
   })).filter(x => x.qty > 0);
 
   let text = `*PESANAN BARU*\n\n`;
-  text += `Nama: ${name}\n`;
-  text += `WA: ${phone}\n`;
-  text += `Alamat: ${address}\n\n`;
+  text += `Nama: ${name}\n\n`;
   text += `*Pesanan:*\n`;
 
   items.forEach(it => {
@@ -113,27 +122,9 @@ function renderCart(){
 function renderMenu(){
   menuList.innerHTML = "";
 
-  // Filter: buang judul-tanggal? (tetap tampil tapi non clickable)
-  // Rules:
-  // - Jika baris mengandung harga seperti "4,000" => dianggap item
-  // - Jika baris diawali emoji / huruf besar => dianggap judul kategori
-  // - Selain itu => dianggap item juga (makanan tanpa harga)
-
-  const lines = MENU_LINES;
-
-  lines.forEach((line) => {
-    const isCategory = (
-      line.includes("🍛") ||
-      line.includes("🥤") ||
-      line.includes("MINUMAN") ||
-      line.includes("MAKANAN") ||
-      line.includes("PEYEK") ||
-      line.includes("TOPPING") ||
-      line.includes("Kini") ||
-      line.includes("Menu")
-    );
-
-    if (isCategory){
+  MENU_LINES.forEach((line) => {
+    // kategori / judul
+    if (isCategoryLine(line)){
       const div = document.createElement("div");
       div.className = "menu-item";
       div.innerHTML = `<div class="menu-title"><b>${escapeHTML(line)}</b></div>`;
@@ -141,7 +132,7 @@ function renderMenu(){
       return;
     }
 
-    // Item normal
+    // item normal
     const qty = CART[line] || 0;
 
     const div = document.createElement("div");
@@ -210,7 +201,7 @@ async function loadMenu(){
     return;
   }
 
-  MENU_LINES = data.menuLines || [];
+  MENU_LINES = (data.menuLines || []).filter(x => String(x || "").trim());
   WA_ADMIN = normalizePhone(data.waAdmin || "");
 
   menuSubtitle.textContent = `Menu tersedia: ${MENU_LINES.length} baris`;
@@ -229,12 +220,7 @@ btnOrder.addEventListener("click", async () => {
     setStatus("");
 
     const name = inpName.value.trim();
-    const phone = normalizePhone(inpPhone.value.trim());
-    const address = inpAddress.value.trim();
-
     if (!name) return setStatus("Nama wajib diisi.", true);
-    if (!phone) return setStatus("No WA wajib diisi.", true);
-    if (!address) return setStatus("Alamat wajib diisi.", true);
 
     const items = Object.keys(CART)
       .map(title => ({ title, qty: CART[title] }))
@@ -248,8 +234,6 @@ btnOrder.addEventListener("click", async () => {
     // Simpan ke sheets
     const save = await api("createOrder", {
       name,
-      phone,
-      address,
       items,
       userAgent: navigator.userAgent
     });
@@ -260,7 +244,7 @@ btnOrder.addEventListener("click", async () => {
       return setStatus("Gagal simpan pesanan: " + save.message, true);
     }
 
-    // Buat tombol WA admin (ambil dari menu)
+    // WA admin
     if (WA_ADMIN){
       const msg = buildWAMessage();
       btnWA.href = `https://wa.me/${WA_ADMIN}?text=${msg}`;
@@ -269,7 +253,7 @@ btnOrder.addEventListener("click", async () => {
       btnWA.classList.add("hidden");
     }
 
-    setStatus("Pesanan berhasil disimpan ke Google Sheets. Silakan klik tombol WhatsApp untuk mengirim ke admin.");
+    setStatus("Pesanan berhasil disimpan. Klik tombol WhatsApp untuk mengirim ke admin.");
 
     // Reset cart
     CART = {};
