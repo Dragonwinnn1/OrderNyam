@@ -18,7 +18,7 @@
 
       <div class="topbar-right">
         <!-- BARCODE PEMBAYARAN -->
-        <img src="barcode.png" class="barcode" alt="Barcode Pembayaran">
+        <img src="barcode.png" class="barcode" id="barcodeImg" alt="Barcode Pembayaran">
 
         <button class="btn" id="btnReload">Reload</button>
       </div>
@@ -61,6 +61,17 @@
       Menu diambil dari Google Sheets. Pesanan tersimpan otomatis.
     </footer>
 
+  </div>
+
+  <!-- MODAL BARCODE -->
+  <div class="modal" id="barcodeModal">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+
+    <div class="modal-card">
+      <div class="modal-title">Scan Barcode Pembayaran</div>
+      <img src="barcode.png" class="modal-img" alt="Barcode Besar">
+      <button class="btn modal-close" id="btnCloseModal">Tutup</button>
+    </div>
   </div>
 
   <script src="script.js"></script>
