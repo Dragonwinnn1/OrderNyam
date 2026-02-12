@@ -50,6 +50,10 @@ body{
   object-fit:cover;
   border:1px solid rgba(255,255,255,0.12);
   background:rgba(255,255,255,0.04);
+  cursor:pointer;
+}
+.barcode:hover{
+  filter:brightness(1.08);
 }
 
 .title{
@@ -250,6 +254,57 @@ body{
   text-align:center;
   font-size:12px;
   color:rgba(234,240,255,0.55);
+}
+
+/*************************************************
+ * MODAL BARCODE
+ *************************************************/
+.modal{
+  position:fixed;
+  inset:0;
+  display:none;
+  z-index:9999;
+}
+
+.modal.show{
+  display:block;
+}
+
+.modal-backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.65);
+}
+
+.modal-card{
+  position:relative;
+  width:min(520px, calc(100% - 28px));
+  margin:60px auto 0;
+  border-radius:22px;
+  padding:18px;
+  background:rgba(10,15,25,0.95);
+  border:1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 18px 80px rgba(0,0,0,0.6);
+  text-align:center;
+}
+
+.modal-title{
+  font-weight:900;
+  font-size:16px;
+  margin-bottom:14px;
+}
+
+.modal-img{
+  width:100%;
+  max-width:420px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.04);
+}
+
+.modal-close{
+  margin-top:14px;
+  width:100%;
 }
 
 @media (max-width: 900px){
