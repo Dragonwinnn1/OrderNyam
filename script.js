@@ -22,6 +22,12 @@ const btnOrder   = document.getElementById("btnOrder");
 const statusText = document.getElementById("statusText");
 const nameInput  = document.getElementById("nameInput");
 
+// modal barcode
+const barcodeImg     = document.getElementById("barcodeImg");
+const barcodeModal   = document.getElementById("barcodeModal");
+const modalBackdrop  = document.getElementById("modalBackdrop");
+const btnCloseModal  = document.getElementById("btnCloseModal");
+
 /*************************************************
  * HELPERS
  *************************************************/
@@ -75,9 +81,6 @@ function buildWhatsAppText(name, items) {
 
 /*************************************************
  * PARSE MENU
- * - Sheet Menu boleh:
- *   1 baris panjang atau banyak baris
- * - Pemisah utama: *
  *************************************************/
 function parseMenuLines(menuLines) {
   const rawText = (menuLines || []).join(" ").trim();
@@ -97,7 +100,6 @@ function parseMenuLines(menuLines) {
       .filter(Boolean);
   }
 
-  // buang item super pendek
   items = items.filter(x => x.length >= 3);
 
   // hapus duplikat
@@ -231,7 +233,7 @@ async function loadMenu() {
  *************************************************/
 async function submitOrder() {
   const name = String(nameInput.value || "").trim();
-  const items = cartToArray(); // sudah auto gabung
+  const items = cartToArray();
 
   if (!name) {
     setStatus("Nama wajib diisi.");
@@ -247,7 +249,6 @@ async function submitOrder() {
   setStatus("Menyimpan pesanan...");
 
   try {
-    // 1) simpan ke sheets
     const res = await apiPost({
       action: "createOrder",
       name,
@@ -259,12 +260,12 @@ async function submitOrder() {
       return;
     }
 
-    // ✅ RESET keranjang + input setelah sukses simpan
+    // reset cart + input
     CART = {};
     renderCart();
     nameInput.value = "";
 
-    // 2) redirect WA admin (kalau ada)
+    // redirect WA admin
     if (!WA_ADMIN) {
       setStatus("Pesanan tersimpan. (WA Admin belum diset)");
       return;
@@ -283,6 +284,26 @@ async function submitOrder() {
     btnOrder.textContent = "Pesan Sekarang";
   }
 }
+
+/*************************************************
+ * BARCODE MODAL
+ *************************************************/
+function openBarcodeModal() {
+  barcodeModal.classList.add("show");
+}
+
+function closeBarcodeModal() {
+  barcodeModal.classList.remove("show");
+}
+
+barcodeImg.addEventListener("click", openBarcodeModal);
+modalBackdrop.addEventListener("click", closeBarcodeModal);
+btnCloseModal.addEventListener("click", closeBarcodeModal);
+
+// ESC untuk tutup modal
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeBarcodeModal();
+});
 
 /*************************************************
  * EVENTS
