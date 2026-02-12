@@ -38,22 +38,37 @@ function setStatus(msg) {
   statusText.textContent = msg || "";
 }
 
+/*************************************************
+ * CART -> ARRAY (AUTO GABUNG ITEM SAMA)
+ *************************************************/
 function cartToArray() {
-  const arr = [];
+  const map = {};
+
   Object.keys(CART).forEach(title => {
-    const qty = Number(CART[title] || 0);
-    if (qty > 0) arr.push({ title, qty });
+    const t = String(title || "").trim();
+    const q = Number(CART[title] || 0);
+
+    if (!t || q <= 0) return;
+
+    if (!map[t]) map[t] = 0;
+    map[t] += q;
   });
-  return arr;
+
+  return Object.keys(map).map(title => ({
+    title,
+    qty: map[title]
+  }));
 }
 
 function buildWhatsAppText(name, items) {
   let text = `*PESANAN BARU*\n\n`;
   text += `Nama: ${name}\n\n`;
   text += `Pesanan:\n`;
+
   items.forEach(it => {
     text += `- ${it.qty}x ${it.title}\n`;
   });
+
   text += `\nTerima kasih 🙏`;
   return text;
 }
@@ -216,7 +231,7 @@ async function loadMenu() {
  *************************************************/
 async function submitOrder() {
   const name = String(nameInput.value || "").trim();
-  const items = cartToArray();
+  const items = cartToArray(); // sudah auto gabung
 
   if (!name) {
     setStatus("Nama wajib diisi.");
